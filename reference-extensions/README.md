@@ -4,8 +4,9 @@
 
 ## 内容
 
-- **wecom/** — 企业微信**应用**插件源码（@mocrane/wecom）的拷贝，已排除 `node_modules`。
-  - 保留：`package.json`、入口 `index.ts`、`src/`（回调、加解密、channel 注册等）。
+- **wecom/** — 企业微信**应用**插件源码（@mocrane/wecom）的完整目录，已排除 `node_modules`。
+  - 保留：`package.json`、入口 `index.ts`、完整 `src/`（回调、加解密、channel 注册等）。
+  - **入站投递与 outbound 参考**：`src/monitor.ts`、`src/monitor/`（state、types）、`src/agent/handler.ts`、`src/agent/api-client.ts`、`src/outbound.ts`；加解密与校验：`src/crypto.ts`、`src/crypto/`（aes、signature、xml）。
   - 配置中的敏感项（CorpID、Secret、Token、EncodingAESKey）来自 `openclaw.json`，不写在此源码中；样本见下。
 - **openclaw-channels-sample.json** — 从 `openclaw.json` 提取的 `channels` 结构，已脱敏为占位符（`YOUR_CORP_ID` 等），便于对照实现 wecom-kefu 的配置 schema。
 
