@@ -1,0 +1,18 @@
+{
+  "channels": {
+    "wecom": {
+      "enabled": true,
+      "agent": {
+        "corpId": "YOUR_CORP_ID",
+        "corpSecret": "YOUR_CORP_SECRET",
+        "agentId": "YOUR_AGENT_ID",
+        "token": "YOUR_CALLBACK_TOKEN",
+        "encodingAESKey": "YOUR_ENCODING_AES_KEY",
+        "welcomeText": "你好！我是 AI 助手",
+        "dm": {
+          "policy": "open"
+        }
+      }
+    }
+  }
+}
