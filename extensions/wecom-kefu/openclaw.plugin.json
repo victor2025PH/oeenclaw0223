@@ -1,0 +1,9 @@
+{
+  "id": "wecom-kefu",
+  "channels": ["wecom-kefu"],
+  "configSchema": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {}
+  }
+}

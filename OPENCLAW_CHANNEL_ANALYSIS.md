@@ -13,9 +13,9 @@
 
 - **结论**：该控制台由**腾讯云产品**提供，在**本服务器上未发现**其前端或后端源码。
 - **已排查**：
-  - `/root`：仅有 OpenClaw 配置、工作区、扩展安装目录，无控制台项目。
-  - `/usr/local/qcloud`：为腾讯云主机监控/代理（stargate、YunJing、TAT 等），**不是** OpenClaw 控制台或通道管理代码。
-  - 未发现 `openclaw-cloud` 或类似名称的控制台仓库。
+ - `/root`：仅有 OpenClaw 配置、工作区、扩展安装目录，无控制台项目。
+ - `/usr/local/qcloud`：为腾讯云主机监控/代理（stargate、YunJing、TAT 等），**不是** OpenClaw 控制台或通道管理代码。
+ - 未发现 `openclaw-cloud` 或类似名称的控制台仓库。
 - **含义**：无法在服务器上通过改代码，在控制台里「增加一个企业微信客服」下拉选项；只能通过产品工单或自建控制台实现该 UI。
 
 ---
@@ -57,20 +57,20 @@
 
 1. **新建或 fork 一个 OpenClaw 通道插件项目**（与 wecom 同级，例如 `wecom-kefu` 或 fork `@mocrane/wecom` 做客服分支）。
 2. **实现企业微信客服适配器**：
-   - 参考 [企业微信客服文档](https://developer.work.weixin.qq.com/document/path/94670)：
-     - 回调配置与加解密（Token、EncodingAESKey、回调 URL）。
-     - 客服会话、消息收发等 API。
-   - 在插件中：注册新 channel（如 `id: "wecom-kefu"`），实现：
-     - **接收**：HTTP 回调（校验签名、解密、解析事件），将「用户发消息」等转为 OpenClaw 内部消息格式并交给 OpenClaw。
-     - **发送**：调用企业微信客服「发送消息」接口，将 OpenClaw 回复下发给用户。
+ - 参考 [企业微信客服文档](https://developer.work.weixin.qq.com/document/path/94670)：
+ - 回调配置与加解密（Token、EncodingAESKey、回调 URL）。
+ - 客服会话、消息收发等 API。
+ - 在插件中：注册新 channel（如 `id: "wecom-kefu"`），实现：
+ - **接收**：HTTP 回调（校验签名、解密、解析事件），将「用户发消息」等转为 OpenClaw 内部消息格式并交给 OpenClaw。
+ - **发送**：调用企业微信客服「发送消息」接口，将 OpenClaw 回复下发给用户。
 3. **配置模型**（与现有 wecom 类似）：CorpID、客服 Secret、客服 AppID/相关 ID、Token、EncodingAESKey、回调 URL 等；若框架支持，在 openclaw.json 的 `channels` 下增加 `wecom-kefu: { ... }`。
 4. **部署**：在 OpenClaw 所在机器上暴露 **HTTPS 回调 URL**，在企业微信客服后台配置该 URL 及 Token、EncodingAESKey；若需放行 IP，在防火墙/安全组放行企业微信客服服务器 IP。
 
 ### 任务 B：在现有 wecom 插件上扩展（可选）
 
 - 在 **@mocrane/wecom** 的代码基础上，增加「企业微信客服」模式：
-  - 同一插件内支持两种 channel 类型：现有「企业微信应用」+ 新增「企业微信客服」。
-  - 共用加解密与 HTTP 框架，分别实现客服的回调与消息 API。
+ - 同一插件内支持两种 channel 类型：现有「企业微信应用」+ 新增「企业微信客服」。
+ - 共用加解密与 HTTP 框架，分别实现客服的回调与消息 API。
 - 注意：wecom 为 npm 包，直接改服务器上的 `extensions/wecom` 会在升级时被覆盖，建议 fork 后发布私有包或通过 npm link 在本地开发后再部署。
 
 ### 任务 C：openclaw.json 配置示例（插件开发完成后）
@@ -100,12 +100,12 @@
 
 ## 四、建议
 
-- **仅用腾讯云控制台、无控制台源码**：  
-  - 先确认是否必须用「客服」能力；若只需企业微信内对话，可继续用现有「企业微信应用」通道。  
-  - 若必须用客服能力：向腾讯云提工单申请「企业微信客服」通道类型，和/或按**任务 A** 在本地/另一 Cursor 中开发「企业微信客服」OpenClaw 插件，并在服务器 openclaw.json 中配置；控制台若无该选项，可暂时仅通过配置文件启用。
-- **有控制台源码**：  
-  - 在控制台仓库中新增「企业微信客服」通道类型与表单（后端 + 前端）；  
-  - 通道能力仍在 OpenClaw 插件侧按任务 A/B 实现。
+- **仅用腾讯云控制台、无控制台源码**： 
+ - 先确认是否必须用「客服」能力；若只需企业微信内对话，可继续用现有「企业微信应用」通道。 
+ - 若必须用客服能力：向腾讯云提工单申请「企业微信客服」通道类型，和/或按**任务 A** 在本地/另一 Cursor 中开发「企业微信客服」OpenClaw 插件，并在服务器 openclaw.json 中配置；控制台若无该选项，可暂时仅通过配置文件启用。
+- **有控制台源码**： 
+ - 在控制台仓库中新增「企业微信客服」通道类型与表单（后端 + 前端）； 
+ - 通道能力仍在 OpenClaw 插件侧按任务 A/B 实现。
 
 ---
 
