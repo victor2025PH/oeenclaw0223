@@ -1,9 +1,34 @@
 /**
  * 企业微信客服回调：签名验证与 AES 解密
+ * 与自建应用 wecom 保持一致：AES-256-CBC、32 字节 Key、PKCS#7(block=32)
  * 参考：https://developer.work.weixin.qq.com/document/path/101033
  */
 
-import { createCipheriv, createDecipheriv, createHash } from "node:crypto";
+import { createDecipheriv, createHash } from "node:crypto";
+
+const WECOM_PKCS7_BLOCK_SIZE = 32;
+
+function decodeEncodingAESKey(encodingAESKey: string): Buffer {
+  const trimmed = encodingAESKey.trim();
+  if (!trimmed) throw new Error("encodingAESKey missing");
+  const withPadding = trimmed.endsWith("=") ? trimmed : `${trimmed}=`;
+  const key = Buffer.from(withPadding, "base64");
+  if (key.length !== 32) {
+    throw new Error(`invalid encodingAESKey (expected 32 bytes after base64 decode, got ${key.length})`);
+  }
+  return key;
+}
+
+function pkcs7Unpad(buf: Buffer, blockSize: number): Buffer {
+  if (buf.length === 0) throw new Error("invalid pkcs7 payload");
+  const pad = buf[buf.length - 1]!;
+  if (pad < 1 || pad > blockSize) throw new Error("invalid pkcs7 padding");
+  if (pad > buf.length) throw new Error("invalid pkcs7 payload");
+  for (let i = 0; i < pad; i += 1) {
+    if (buf[buf.length - 1 - i] !== pad) throw new Error("invalid pkcs7 padding");
+  }
+  return buf.subarray(0, buf.length - pad);
+}
 
 /**
  * 验证签名：msg_signature = sha1(sort(token, timestamp, nonce, echostr).join(''))
@@ -38,25 +63,36 @@ export function verifyMsgSignature(
 }
 
 /**
- * 解密企业微信回调内容（echostr 或 POST body 中的 Encrypt）
- * EncodingAESKey：43 位 Base64，解码后 32 字节，前 16 字节为 AES key，前 16 字节同时作为 IV（AES-128-CBC）
- * 明文结构：16B 随机 + 4B 消息长度(大端) + 消息内容 + corpId
+ * 解密企业微信回调内容（与 wecom 自建应用一致）
+ * AES-256-CBC，Key 为 EncodingAESKey Base64 解码的 32 字节，IV 为 Key 前 16 字节，PKCS#7 block=32
+ * 明文结构：16B 随机 + 4B 消息长度(大端) + 消息内容 + [receiveId]
  */
-export function decrypt(encodingAESKey: string, encryptedBase64: string): string {
-  const keyBuf = Buffer.from(encodingAESKey, "base64");
-  if (keyBuf.length !== 32) {
-    throw new Error(`invalid encodingAESKey length: ${keyBuf.length}, expected 32`);
+export function decrypt(encodingAESKey: string, encryptedBase64: string, receiveId?: string): string {
+  const aesKey = decodeEncodingAESKey(encodingAESKey);
+  const iv = aesKey.subarray(0, 16);
+  const decipher = createDecipheriv("aes-256-cbc", aesKey, iv);
+  decipher.setAutoPadding(false);
+  const decryptedPadded = Buffer.concat([
+    decipher.update(Buffer.from(encryptedBase64, "base64")),
+    decipher.final(),
+  ]);
+  const decrypted = pkcs7Unpad(decryptedPadded, WECOM_PKCS7_BLOCK_SIZE);
+
+  if (decrypted.length < 20) {
+    throw new Error(`invalid decrypted payload (expected at least 20 bytes, got ${decrypted.length})`);
   }
-  const key = keyBuf.subarray(0, 16);
-  const iv = key; // 企业微信/微信约定：IV 与 key 相同
-  const encrypted = Buffer.from(encryptedBase64, "base64");
-
-  const decipher = createDecipheriv("aes-128-cbc", key, iv);
-  decipher.setAutoPadding(true);
-  const decrypted = Buffer.concat([decipher.update(encrypted), decipher.final()]);
-
-  // 16 随机 + 4 长度(大端) + content + corpId
   const msgLen = decrypted.readUInt32BE(16);
-  const content = decrypted.subarray(20, 20 + msgLen).toString("utf8");
+  const msgStart = 20;
+  const msgEnd = msgStart + msgLen;
+  if (msgEnd > decrypted.length) {
+    throw new Error(`invalid decrypted msg length (msgEnd=${msgEnd}, payloadLength=${decrypted.length})`);
+  }
+  const content = decrypted.subarray(msgStart, msgEnd).toString("utf8");
+  if (receiveId && receiveId.length > 0) {
+    const trailing = decrypted.subarray(msgEnd).toString("utf8");
+    if (trailing !== receiveId) {
+      throw new Error(`receiveId mismatch (expected "${receiveId}", got "${trailing}")`);
+    }
+  }
   return content;
 }
